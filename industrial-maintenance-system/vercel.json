@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/tecnico",
+      "dest": "src/web/static/tecnico.html"
+    },
+    {
+      "src": "/login",
+      "dest": "src/web/static/login.html"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "src/web/static/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "src/web/static/js/$1"
+    },
+    {
+      "src": "/",
+      "dest": "src/web/static/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "src/web/static/$1"
+    }
+  ]
+}
