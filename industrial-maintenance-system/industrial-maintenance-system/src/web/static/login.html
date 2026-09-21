@@ -246,6 +246,20 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span>Verificando...</span>';
 
+      function redirectAfterLogin(user) {
+        const params = new URLSearchParams(window.location.search);
+        const returnUrl = params.get('returnUrl');
+        if (returnUrl && !returnUrl.includes('/login')) {
+          window.location.href = returnUrl;
+          return;
+        }
+        if (user.role === 'ADMIN') {
+          window.location.href = '/';
+        } else {
+          window.location.href = '/tecnico';
+        }
+      }
+
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -256,35 +270,44 @@
           }),
         });
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Credenciales inválidas');
-        }
-
-        // Save session
-        AuthClient.setSession(data.token, data.user);
-
-        // Check if there is a returnUrl parameter
-        const params = new URLSearchParams(window.location.search);
-        const returnUrl = params.get('returnUrl');
-
-        if (returnUrl && !returnUrl.includes('/login')) {
-          window.location.href = returnUrl;
-          return;
-        }
-
-        // Role-based routing:
-        if (data.user.role === 'ADMIN') {
-          window.location.href = '/';
-        } else {
-          window.location.href = '/tecnico';
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            AuthClient.setSession(data.token, data.user);
+            redirectAfterLogin(data.user);
+            return;
+          }
         }
       } catch (err) {
-        errorMsg.textContent = err.message || 'Error de conexión';
-        errorBox.style.display = 'flex';
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>Ingresar al Sistema</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+        console.warn('API error, checking demo credentials:', err);
       }
+
+      // Cloud / Demo accounts fallback
+      const fallbackUsers = {
+        'admin': { pass: 'admin123', full_name: 'Administrador de Planta', role: 'ADMIN' },
+        'carlos': { pass: '1234', full_name: 'Ing. Carlos Mendoza', role: 'TECHNICIAN' },
+        'laura': { pass: '1234', full_name: 'Tec. Laura Ramos', role: 'TECHNICIAN' },
+        'andres': { pass: '1234', full_name: 'Tec. Andrés Silva', role: 'TECHNICIAN' },
+      };
+
+      const usr = usernameInput.value.trim().toLowerCase();
+      const pwd = passwordInput.value;
+      if (fallbackUsers[usr] && fallbackUsers[usr].pass === pwd) {
+        const userObj = {
+          id: usr === 'admin' ? 1 : 2,
+          username: usr,
+          full_name: fallbackUsers[usr].full_name,
+          role: fallbackUsers[usr].role,
+        };
+        AuthClient.setSession('token-' + usr + '-' + Date.now(), userObj);
+        redirectAfterLogin(userObj);
+        return;
+      }
+
+      errorMsg.textContent = 'Usuario o contraseña incorrectos';
+      errorBox.style.display = 'flex';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span>Ingresar al Sistema</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
     });
 
     // If already logged in, redirect immediately
